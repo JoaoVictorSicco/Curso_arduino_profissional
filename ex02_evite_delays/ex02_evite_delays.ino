@@ -16,11 +16,12 @@ void loop()
   // Função millis - Comparar quanto tempo se passou desde o último acionamento comparando com o tempo atual
   static long long tempo = 0;
 
-  digitalWrite(LED1, LED1STATUS);
+  
   if (tempo + 500 < millis())
   {
     LED1STATUS = !LEDSTATUS;
+    digitalWrite(LED1, LED1STATUS);
     tempo = millis();
   }
-  LED1STATUS = !LED1STATUS;
+  
 }
