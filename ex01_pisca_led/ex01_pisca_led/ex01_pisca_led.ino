@@ -4,6 +4,7 @@
 
 
 #define LED1 27
+bool LEDSTATUS = 0;
 
 void setup() 
 {
@@ -15,8 +16,13 @@ void setup()
 void loop() 
 {
   
-  digitalWrite(LED1,HIGH);
+//  digitalWrite(LED1,LED1STATUS);
+//  delay(500);
+//  digitalWrite(LED1,HIGH);
+//  delay(500);
+
+  
+  digitalWrite(LED1,LED1STATUS);
   delay(500);
-  digitalWrite(LED1,HIGH);
-  delay(500);
+  LED1STATUS = !LED1STATUS;
 }
