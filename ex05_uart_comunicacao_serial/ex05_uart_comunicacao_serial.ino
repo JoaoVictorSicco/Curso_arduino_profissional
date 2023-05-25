@@ -1,6 +1,6 @@
 // Curso arduino profissional WRKITS
 // Aula 3.5 - UART (Comunicação Serial)
-// Exemplo UART
+// Exemplo UART - Envio de dados através do digital Write 
 
 
 #define LED1             27
