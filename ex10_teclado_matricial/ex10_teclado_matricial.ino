@@ -2,106 +2,207 @@
 // Aula 4.4 - Teclado Matricial 
 // Exemplo Teclado Matricial
 
-#include<LiquidCrystal.h>
+//Inclusão de bibliotecas
+#include <LiquidCrystal.h>
 
 
-#define LED1             27
-#define BT1               9                         //Botão utilizado para alternar o estado do led
-#define debounce_time   450
-#define POT              A0
+//Definições de pinos
+#define BT1 2
+#define POT A0
+#define DebounceTime 450
+//Display
+#define RS 5
+#define EN 6
+#define DISP_D4 7
+#define DISP_D5 8
+#define DISP_D6 9
+#define DISP_D7 10
 
-//Variáveis display
-#define RS                5
-#define EN                6
-#define DISP_D4           7
-#define DISP_D5           8
-#define DISP_D6           9
-#define DISP_D7          10
+unsigned short LINES[4] = { A5, A4, A3, A2 };
+unsigned short COLUMNS[4] ={ A1, 2, 3, 4 }; 
 
-unsigned short LINES[4] = {A5,A4,A3,A2};
-unsigned short COLUMS[4] = {A1,2,3,4};
-
-// Definição de pinos para o display
-LiquidCrystal lcd(RS,EN,DISP_D4,DISP_D5,DISP_D6,DISP_D7);
-
-unsigned char scanKeyboard();         // Função retorna unsigned char (um botão pressionado), realiza um scan do teclado e fazer a conversão do botão da matriz ao que é um botão pressionado
+//Definição de pinos para o displau
+LiquidCrystal lcd(RS, EN, DISP_D4, DISP_D5, DISP_D6, DISP_D7);
 
 
-bool BT1_STATUS = 0;
-bool LEDSTATUS = 0;
+unsigned char scanKeyboard();
 
-//void leitura_botao();
-int leitura_potenciometro();            //Função que realiza a leitura de um potenciômetro e retorna um valor inteiro
+bool LED1STATUS = 0;
+bool BT1STATUS = 0;
 
-void interrupcao0();                    // Função da interrupção
+void LeBotoes();
+int LePot();
+float ConvertVolt(int PCM, float VMAX);
 
-float converte_tensao(int valor_do_potenciometro, float tensao_maxima);
 
-void interrupcao0()
-{
-  Serial.print("Interrupcao atuada");
-}
-void setup()
-{
+void setup() {
   Serial.begin(115200);
-  lcd.begin(20,4);
-  pinMode(LED1, OUTPUT);                //Declarando o led como saída
-  pinMode(BT1,  INPUT);                 //Declarando o botão como entrada
-  pinMode(POT,  INPUT);
+  lcd.begin(20, 4);
+  pinMode(BT1, INPUT);
+  pinMode(POT, INPUT);
 
-  for (short i = 0; i<4;i++)
-  {
-    pinMode(LINES[i],OUTPUT);
-    digitalWrite(LINES[i],HIGH);
-    pinMode(COLUMS[i],INPUT);
-    digitalWrite(COLUMS[i],HIGH);
+  for (short i = 0; i < 4; i++) {
+    pinMode(LINES[i], OUTPUT);
+    digitalWrite(LINES[i], HIGH);
+    pinMode(COLUMNS[i], INPUT);
+    digitalWrite(COLUMNS[i], HIGH);
   }
-
 }
 
-void loop()
-{
-  static long long ElapsedTime = 0;     // Variável para comparação do tempo millis
-  int valor_potenciometro = 0;
-  float tensao = 0;
+void loop() {
+  static long long ElapsedTime = 0;
+  int PotValue = 0;
+  float Volt = 0;
+  unsigned char Button = 0xff;
+  static int Setpoint = 0;
 
-  valor_potenciometro = leitura_potenciometro(); //Função de leitura
-  tensao = converte_tensao(valor_potenciometro, 5); //Conversão para tensão
-  //leitura_botao();
+  //Leitura do potenciometro
+  PotValue = LePot();               //Funcao de leitura
+  Volt = ConvertVolt(PotValue, 5);  //Conversao de engenharia
 
-  if (ElapsedTime + 250 < millis())
-  {
+  if (ElapsedTime + 250 < millis()) {
     ElapsedTime = millis();
     lcd.clear();
-    lcd.setCursor(3,0);     //Coluna,linha
+    lcd.setCursor(3, 0);  //(coluna, linha)
     lcd.print("DEMO LCD 20X4");
-    lcd.setCursor(0,1);
+    lcd.setCursor(0, 1);
     lcd.print("VOLTAGE: ");
-    lcd.setCursor(10,1);
-    lcd.print(((int)tensao)%10);
+    lcd.setCursor(10, 1);
+    lcd.print(((int)Volt) % 10);
     lcd.print(".");
-    lcd.print(((int)(tensao*10))%10);
+    lcd.print(((int)(Volt * 10)) % 10);
     lcd.print("v");
 
-    for(short i=0;i<((int)((float)tensao*4));i++)
-    {
-      lcd.setCursor(i,3);
+    for (short i = 0; i < ((int)((float)Volt * 4)); i++) {
+      lcd.setCursor(i, 3);
       lcd.print("#");
     }
+    lcd.setCursor(0, 2);
+
+    //Rotina para atualizar tela - Setpoint teclado
+    lcd.print("SETPOINT: ");
+    lcd.print((Setpoint / 10) % 10);
+    lcd.print(".");
+    lcd.print((Setpoint) % 10);
   }
-  analogWrite(LED1,(valor_potenciometro/4));  // Valor do potenciometro vai até 1024, porém o analogwrite vai até 255, então divide o 1024 por 4 pra dar 255 
+
+  //Rotina de scan do teclado
+  Button = scanKeyboard();
+  if (Button != 0xff) {
+    //   Serial.println(Button);
+    if (Button >= 48 && Button <= 57) {    
+      Setpoint = Setpoint * 10 + (Button - 48);
+      if (Setpoint > 99) {
+        Setpoint = 0;
+      }
+    }
+  }
 }
 
-int leitura_potenciometro()
-{
-  int valor = 0;
-  valor = analogRead(A0);
-  return valor;
+/*void LeBotoes() {
+  static bool BT1_FLAG = 0;
+  static long long BT1_DEBOUNCE = 0;
+
+  if (!digitalRead(BT1) && !BT1_FLAG) {
+    BT1_FLAG = 1;
+    BT1_DEBOUNCE = millis();
+  }
+
+  if (!digitalRead(BT1) && BT1_FLAG && (BT1_DEBOUNCE + DebounceTime < millis())) {
+    BT1_DEBOUNCE = millis();
+    BT1STATUS = 1;
+  }
+
+  if (digitalRead(BT1) && BT1_FLAG && (BT1_DEBOUNCE + DebounceTime < millis())) {
+    BT1_FLAG = 0;
+    BT1STATUS = 0;
+  }
+}
+*/
+
+int LePot() {
+  int value = 0;
+  value = analogRead(POT);
+  return value;
 }
 
-float converte_tensao(int valor_do_potenciometro, float tensao_maxima)
-{
-  float escala = (float)tensao_maxima / (float)1024;
-  return valor_do_potenciometro * escala;
+float ConvertVolt(int PCM, float VMAX) {
+  float escala = (float)VMAX / (float)1024;
+  return PCM * escala;
+}
 
+unsigned char scanKeyboard() {
+  short BTn = 0;
+  unsigned char BTp = 0xff;
+  static unsigned char oldBTp = 0xff;
+
+  for (short i = 0; i < 4; i++) {  //Scan de linha
+    digitalWrite(LINES[i], LOW);
+    for (short z = 0; z < 4; z++) {  //Scan de coluna
+      if (digitalRead(COLUMNS[z]) == LOW) {
+        BTn = (i)*4 + (z + 1);
+      }
+    }
+    delayMicroseconds(100);
+    digitalWrite(LINES[i], HIGH);
+  }
+
+  switch (BTn) {
+    case 1:
+      BTp = '1';
+      break;
+    case 2:
+      BTp = '2';
+      break;
+    case 3:
+      BTp = '3';
+      break;
+    case 4:
+      BTp = 'A';
+      break;
+    case 5:
+      BTp = '4';
+      break;
+    case 6:
+      BTp = '5';
+      break;
+    case 7:
+      BTp = '6';
+      break;
+    case 8:
+      BTp = 'B';
+      break;
+    case 9:
+      BTp = '7';
+      break;
+    case 10:
+      BTp = '8';
+      break;
+    case 11:
+      BTp = '9';
+      break;
+    case 12:
+      BTp = 'C';
+      break;
+    case 13:
+      BTp = '*';
+      break;
+    case 14:
+      BTp = '0';
+      break;
+    case 15:
+      BTp = '#';
+      break;
+    case 16:
+      BTp = 'D';
+      break;
+  }
+
+
+  if (BTp != oldBTp) {
+    oldBTp = BTp;
+    return BTp;
+  }else{
+    return 0xff;
+  }
 }
