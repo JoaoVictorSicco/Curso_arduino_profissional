@@ -1,4 +1,4 @@
-
+#include "keyboard.h"
 
 int LePot() {
   int value = 0;
@@ -84,5 +84,25 @@ unsigned char scanKeyboard() {
     return BTp;
   }else{
     return 0xff;
+  }
+}
+
+void LeBotoes() {
+  static bool BT1_FLAG = 0;
+  static long long BT1_DEBOUNCE = 0;
+
+  if (!digitalRead(BT1) && !BT1_FLAG) {
+    BT1_FLAG = 1;
+    BT1_DEBOUNCE = millis();
+  }
+
+  if (!digitalRead(BT1) && BT1_FLAG && (BT1_DEBOUNCE + DebounceTime < millis())) {
+    BT1_DEBOUNCE = millis();
+    BT1STATUS = 1;
+  }
+
+  if (digitalRead(BT1) && BT1_FLAG && (BT1_DEBOUNCE + DebounceTime < millis())) {
+    BT1_FLAG = 0;
+    BT1STATUS = 0;
   }
 }

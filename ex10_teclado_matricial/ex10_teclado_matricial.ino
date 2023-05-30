@@ -4,6 +4,7 @@
 
 //Inclusão de bibliotecas
 #include <LiquidCrystal.h>
+#include "keyboard.h"
 
 
 //Definições de pinos
@@ -30,7 +31,7 @@ unsigned char scanKeyboard();
 bool LED1STATUS = 0;
 bool BT1STATUS = 0;
 
-// Funções estão em keyboard
+// Funções estão em keyboard.ino
 extern void LeBotoes();
 extern int LePot();
 extern float ConvertVolt(int PCM, float VMAX);
